@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Результаты тестов</title>
+  <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.6.0/uicons-bold-rounded/css/uicons-bold-rounded.css'>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #ffffff, #e0eafc, #cfdef3);
+
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    #password-screen, #results-screen {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 600px;
+      
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 24px;
+      color: #333;
+    }
+
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #0066ff;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #004ecc;
+    }
+
+    button.red {
+      background-color: #ff4444;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e0e0e0;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f0f0;
+      color: #555;
+    }
+
+    td:last-child button {
+      background: #ccc;
+      color: #000;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    td:last-child button:hover {
+      background: #999;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="password-screen">
+    <h2>Доступ для учителя</h2>
+    <input type="password" id="teacher-password" placeholder="Введите пароль">
+    <button onclick="checkPassword()">Войти</button>
+  </div>
+
+  <div id="results-screen" style="display: none;">
+    <h2>Результаты тестов</h2>
+    <button class="red" onclick="clearResults()"><i class="fi fi-br-trash"></i> Очистить все результаты</button>
+    <table id="results-table">
+      <tr>
+        <th>Ученик</th>
+        <th>Тест</th>
+        <th>Баллы</th>
+        <th>Дата</th>
+        <th>Действия</th>
+      </tr>
+    </table>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAdTYKm8Lfj3owWykdpE4IoceKd82KqIr0",
+    authDomain: "mytestapp-ee04d.firebaseapp.com",
+    projectId: "mytestapp-ee04d",
+    storageBucket: "mytestapp-ee04d.appspot.com",
+    messagingSenderId: "184555015600",
+    appId: "1:184555015600:web:32cf547aa8b29d1ee49a75",
+    measurementId: "G-T73QPBYNFS"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+
+<script>
+  const TEACHER_PASSWORD = "1234";
+
+function checkPassword() {
+  const password = document.getElementById("teacher-password").value;
+  if (password !== TEACHER_PASSWORD) {
+    alert("Неверный пароль!");
+    return;
+  }
+  document.getElementById("password-screen").style.display = "none";
+  document.getElementById("results-screen").style.display = "block";
+  loadResults();
+}
+
+function loadResults() {
+  const table = document.getElementById("results-table");
+
+  // Очищаем таблицу (кроме заголовка)
+  while (table.rows.length > 1) table.deleteRow(1);
+
+  db.collection("results").get().then((querySnapshot) => {
+    querySnapshot.forEach((doc) => {
+      const result = doc.data();
+      const row = table.insertRow();
+      row.insertCell().textContent = result.student;
+      row.insertCell().textContent = result.testId;
+      row.insertCell().textContent = result.score;
+      row.insertCell().textContent = result.date;
+
+      // Кнопка удаления одного результата
+      const deleteBtn = document.createElement("button");
+      deleteBtn.innerHTML =  `<i class="fi fi-br-trash"> `;
+      deleteBtn.style.background = "#ff8888";
+      deleteBtn.onclick = () => deleteResult(doc.id);
+      row.insertCell().appendChild(deleteBtn);
+    });
+  }).catch(error => {
+    alert("Ошибка загрузки результатов: " + error);
+    console.error(error);
+  });
+}
+
+function deleteResult(docId) {
+  db.collection("results").doc(docId).delete().then(() => {
+    loadResults();
+  }).catch(error => {
+    alert("Ошибка удаления результата: " + error);
+    console.error(error);
+  });
+}
+
+function clearResults() {
+  if (!confirm("Вы уверены, что хотите удалить ВСЕ результаты?")) return;
+
+  db.collection("results").get().then((querySnapshot) => {
+    const batch = db.batch();
+    querySnapshot.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    return batch.commit();
+  }).then(() => {
+    loadResults();
+  }).catch(error => {
+    alert("Ошибка очистки результатов: " + error);
+    console.error(error);
+  });
+}
+
+</script>
+</body>
+</html>
