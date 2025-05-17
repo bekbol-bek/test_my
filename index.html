@@ -224,7 +224,8 @@ async function saveTest() {
     questions: data
   })
   .then(() => {
-    const link = `${window.location.origin}/view.html?testId=${testId}`;
+    const repoName = 'test_my';
+    const link = `${window.location.origin}/${repoName}/view.html?testId=${testId}`;
     document.getElementById('testLink').value = link;
     alert("Тест сохранён в Firebase!");
   })
